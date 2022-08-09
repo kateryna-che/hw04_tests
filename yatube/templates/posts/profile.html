@@ -1,0 +1,9 @@
+{% extends 'base.html' %}
+{% block content %}
+  <h1>Все посты пользователя {{ author }} </h1>
+  <h3>Всего постов: {{ posts_count }} </h3>
+  {% for post in page_obj %}
+    {% include 'posts/card_post.html' %}
+  {% endfor %}
+  {% include 'posts/includes/paginator.html' %}
+{% endblock %}
