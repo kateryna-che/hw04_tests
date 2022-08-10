@@ -61,7 +61,9 @@ class TaskPagesTests(TestCase):
         }
         for page, kwargs in pages.items():
             with self.subTest(page=page):
-                response = self.authorized_client.get(reverse(page, kwargs=kwargs))
+                response = self.authorized_client.get(reverse(
+                    page, kwargs=kwargs)
+                )
                 post = response.context['page_obj'][0]
                 self.assertEqual(post, self.post)
 
