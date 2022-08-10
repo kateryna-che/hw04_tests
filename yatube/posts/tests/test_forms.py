@@ -39,7 +39,7 @@ class PostFormTests(TestCase):
         )
 
     def test_post_edit(self):
-        text = 'test-text2'
+        text = 'test-text-edit'
         response = self.authorized_client.post(
             reverse('posts:post_edit', kwargs={'post_id': self.post.id}),
             data={'text': text},

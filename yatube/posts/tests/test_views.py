@@ -18,10 +18,10 @@ class TaskPagesTests(TestCase):
             slug='test-slug',
             description='test-description',
         )
-        cls.group2 = Group.objects.create(
-            title='test-group2',
-            slug='test-slug2',
-            description='test-description2',
+        cls.group_without_posts = Group.objects.create(
+            title='test-group-without-posts',
+            slug='test-slug-without-posts',
+            description='test-description-without-posts',
         )
         cls.post = Post.objects.create(
             author=cls.user,
@@ -53,24 +53,17 @@ class TaskPagesTests(TestCase):
                 response = self.authorized_client.get(reverse_name)
                 self.assertTemplateUsed(response, template)
 
-    def test_index_page_show_correct_context(self):
-        response = self.authorized_client.get(reverse('posts:index'))
-        post = response.context['page_obj'][0]
-        self.assertEqual(post.text, self.post.text)
-
-    def test_group_list_page_show_correct_context(self):
-        response = self.authorized_client.get(reverse(
-            'posts:group_list',
-            kwargs={'slug': self.post.group.slug})
-        )
-        self.assertEqual(response.context['group'], self.post.group)
-
-    def test_profile_page_show_correct_context(self):
-        response = self.authorized_client.get(reverse(
-            'posts:profile',
-            kwargs={'username': self.post.author})
-        )
-        self.assertEqual(response.context['author'], self.post.author)
+    def test_pages_show_correct_context(self):
+        pages = {
+            'posts:index': '',
+            'posts:group_list': {'slug': self.post.group.slug},
+            'posts:profile': {'username': self.post.author},
+        }
+        for page, kwargs in pages.items():
+            with self.subTest(page=page):
+                response = self.authorized_client.get(reverse(page, kwargs=kwargs))
+                post = response.context['page_obj'][0]
+                self.assertEqual(post, self.post)
 
     def test_post_detail_show_correct_context(self):
         response = self.authorized_client.get(reverse(
@@ -91,7 +84,7 @@ class TaskPagesTests(TestCase):
         self.assertIsInstance(response.context.get('form'), PostForm)
 
     def test_creating_post(self):
-        self.assertNotEqual(self.post.group, self.group2)
+        self.assertNotEqual(self.post.group, self.group_without_posts)
 
 
 class PaginatorViewsTest(TestCase):
@@ -99,28 +92,30 @@ class PaginatorViewsTest(TestCase):
     def setUpClass(cls):
         super().setUpClass()
         cls.user = User.objects.create_user(username='auth')
+        cls.user_paginator = User.objects.create_user(
+            username='user-paginator'
+        )
         cls.group = Group.objects.create(
             title='test-group',
             slug='test-slug',
             description='test-description',
         )
+        Post.objects.bulk_create([
+            Post(
+                author=cls.user_paginator,
+                text='test-post',
+                group=cls.group
+            )
+            for i in range(13)
+        ])
+        Post.objects.create(
+            author=cls.user,
+            text='test-post',
+        )
 
     def setUp(self):
         self.client = Client()
         self.client.force_login(self.user)
-        self.user_paginator = User.objects.create_user(
-            username='user-paginator'
-        )
-        for i in range(13):
-            Post.objects.create(
-                author=self.user_paginator,
-                text='test-post',
-                group=self.group,
-            )
-        Post.objects.create(
-            author=self.user,
-            text='test-post',
-        )
 
     def test_index_first_page_contains_ten_records(self):
         response = self.client.get(reverse('posts:index'))

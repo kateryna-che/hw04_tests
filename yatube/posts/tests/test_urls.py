@@ -10,52 +10,46 @@ class StaticURLTests(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.user = User.objects.create_user(username='auth')
+        cls.auth = User.objects.create_user(username='auth')
+        cls.user = User.objects.create_user(username='user')
         cls.group = Group.objects.create(
             title='test-group',
             slug='test-slug',
             description='test-description',
         )
         cls.post = Post.objects.create(
-            author=cls.user,
+            author=cls.auth,
             text='test-post',
         )
 
     def setUp(self):
         self.guest_client = Client()
-        self.authorized_author = Client()
-        self.authorized_author.force_login(self.user)
         self.authorized_client = Client()
-        self.authorized_client.force_login(
-            User.objects.create_user(username='client')
-        )
+        self.authorized_client.force_login(self.auth)
+        self.authorized_no_auth = Client()
+        self.authorized_no_auth.force_login(self.user)
 
-    def test_page_for_everyone(self):
+    def test_pages(self):
         url_names = (
             '/',
-            '/group/test-slug/',
-            '/profile/auth/',
-            f'/posts/{self.post.pk}/',
+            f'/group/{self.group.slug}/',
+            f'/profile/{self.auth}/',
+            f'/posts/{self.post.id}/',
+            f'/posts/{self.post.id}/edit/',
+            '/create/',
+
         )
         for url in url_names:
             with self.subTest(url=url):
-                response = self.guest_client.get(url)
+                response = self.authorized_client.get(url)
                 self.assertEqual(response.status_code, 200)
 
     def test_unexisting_page(self):
-        response = self.guest_client.get('/unexisting-page/')
+        response = self.authorized_client.get('/unexisting-page/')
         self.assertEqual(response.status_code, 404)
 
-    def test_authorized_author(self):
-        response = self.authorized_author.get(f'/posts/{self.post.pk}/edit/')
-        self.assertEqual(response.status_code, 200)
-
-    def test_authorized_client(self):
-        response = self.authorized_client.get('/create/')
-        self.assertEqual(response.status_code, 200)
-
-    def test_redirect_client(self):
-        response = self.authorized_client.get(f'/posts/{self.post.pk}/edit/')
+    def test_redirect_no_auth(self):
+        response = self.authorized_no_auth.get(f'/posts/{self.post.pk}/edit/')
         self.assertRedirects(response, f'/posts/{self.post.pk}/')
 
     def test_redirect_unauthorized(self):
@@ -71,8 +65,8 @@ class StaticURLTests(TestCase):
     def test_urls_uses_correct_template(self):
         templates_url_names = {
             '/': 'posts/index.html',
-            '/group/test-slug/': 'posts/group_list.html',
-            '/profile/auth/': 'posts/profile.html',
+            f'/group/{self.group.slug}/': 'posts/group_list.html',
+            f'/profile/{self.auth}/': 'posts/profile.html',
             f'/posts/{self.post.pk}/': 'posts/post_detail.html',
             f'/posts/{self.post.pk}/edit/': 'posts/create_post.html',
             '/create/': 'posts/create_post.html',
@@ -80,5 +74,5 @@ class StaticURLTests(TestCase):
         }
         for address, template in templates_url_names.items():
             with self.subTest(address=address):
-                response = self.authorized_author.get(address)
+                response = self.authorized_client.get(address)
                 self.assertTemplateUsed(response, template)
