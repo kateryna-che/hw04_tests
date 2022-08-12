@@ -33,6 +33,19 @@ class TaskPagesTests(TestCase):
         self.authorized_client = Client()
         self.authorized_client.force_login(self.user)
 
+    def post_attributes_test(self, page, kwargs=None):
+        response = self.authorized_client.get(reverse(
+            page, kwargs=kwargs)
+        )
+        post = response.context['page_obj'][0]
+        post_attributes = {
+            post.text: self.post.text,
+            post.author: self.post.author,
+            post.group: self.post.group,
+        }
+        for test_attribute, attribute in post_attributes.items():
+            self.assertEqual(test_attribute, attribute)
+
     def test_pages_uses_correct_template(self):
         templates_pages_names = {
             reverse('posts:index'): 'posts/index.html',
@@ -53,25 +66,14 @@ class TaskPagesTests(TestCase):
                 response = self.authorized_client.get(reverse_name)
                 self.assertTemplateUsed(response, template)
 
-    def test_pages_show_correct_context(self):
-        pages = {
-            'posts:index': '',
-            'posts:group_list': {'slug': self.post.group.slug},
-            'posts:profile': {'username': self.post.author},
-        }
-        for page, kwargs in pages.items():
-            with self.subTest(page=page):
-                response = self.authorized_client.get(reverse(
-                    page, kwargs=kwargs)
-                )
-                post = response.context['page_obj'][0]
-                post_attributes = {
-                    post.text: self.post.text,
-                    post.author: self.post.author,
-                    post.group: self.post.group,
-                }
-                for test_attribute, attribute in post_attributes.items():
-                    self.assertEqual(test_attribute, attribute)
+    def test_post_index_show_correct_context(self):
+        self.post_attributes_test('posts:index')
+
+    def test_post_group_list_show_correct_context(self):
+        self.post_attributes_test('posts:group_list', {'slug': self.post.group.slug})
+
+    def test_post_profile_show_correct_context(self):
+        self.post_attributes_test('posts:profile', {'username': self.post.author})
 
     def test_post_detail_show_correct_context(self):
         response = self.authorized_client.get(reverse(
