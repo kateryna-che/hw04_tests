@@ -65,7 +65,13 @@ class TaskPagesTests(TestCase):
                     page, kwargs=kwargs)
                 )
                 post = response.context['page_obj'][0]
-                self.assertEqual(post, self.post)
+                post_attributes = {
+                    post.text: self.post.text,
+                    post.author: self.post.author,
+                    post.group: self.post.group,
+                }
+                for test_attribute, attribute in post_attributes.items():
+                    self.assertEqual(test_attribute, attribute)
 
     def test_post_detail_show_correct_context(self):
         response = self.authorized_client.get(reverse(
@@ -93,7 +99,6 @@ class PaginatorViewsTest(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.user = User.objects.create_user(username='auth')
         cls.user_paginator = User.objects.create_user(
             username='user-paginator'
         )
@@ -110,47 +115,22 @@ class PaginatorViewsTest(TestCase):
             )
             for i in range(13)
         ])
-        Post.objects.create(
-            author=cls.user,
-            text='test-post',
-        )
 
     def setUp(self):
         self.client = Client()
-        self.client.force_login(self.user)
+        self.client.force_login(self.user_paginator)
 
-    def test_index_first_page_contains_ten_records(self):
-        response = self.client.get(reverse('posts:index'))
-        self.assertEqual(len(response.context['page_obj']), 10)
-
-    def test_index_second_page_contains_four_records(self):
-        response = self.client.get(reverse('posts:index') + '?page=2')
-        self.assertEqual(len(response.context['page_obj']), 4)
-
-    def test_group_list_first_page_contains_ten_records(self):
-        response = self.client.get(reverse(
-            'posts:group_list',
-            kwargs={'slug': self.group.slug})
-        )
-        self.assertEqual(len(response.context['page_obj']), 10)
-
-    def test_group_list_second_page_contains_three_records(self):
-        response = self.client.get(
-            reverse(
-                'posts:group_list',
-                kwargs={'slug': self.group.slug}) + '?page=2'
-        )
-        self.assertEqual(len(response.context['page_obj']), 3)
-
-    def test_profile_first_page_contains_ten_records(self):
-        response = self.client.get(reverse(
-            'posts:profile',
-            kwargs={'username': 'user-paginator'})
-        )
-        self.assertEqual(len(response.context['page_obj']), 10)
-
-    def test_profile_second_page_contains_three_records(self):
-        response = self.client.get(
-            reverse('posts:profile',
-                    kwargs={'username': 'user-paginator'}) + '?page=2')
-        self.assertEqual(len(response.context['page_obj']), 3)
+    def test_paginator(self):
+        pages = {
+            'posts:index': '',
+            'posts:group_list': {'slug': self.group.slug},
+            'posts:profile': {'username': self.user_paginator},
+        }
+        for page, kwargs in pages.items():
+            with self.subTest(page=page):
+                pages_num = {'1': 10, '2': 3}
+                for num, posts in pages_num.items():
+                    response = self.client.get(
+                        reverse(page, kwargs=kwargs) + f'?page={num}'
+                    )
+                    self.assertEqual(len(response.context['page_obj']), posts)

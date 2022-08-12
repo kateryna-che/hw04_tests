@@ -1,3 +1,5 @@
+from http import HTTPStatus
+
 from django.contrib.auth import get_user_model
 from django.test import Client, TestCase
 
@@ -42,11 +44,11 @@ class StaticURLTests(TestCase):
         for url in url_names:
             with self.subTest(url=url):
                 response = self.authorized_client.get(url)
-                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.status_code, HTTPStatus.OK)
 
     def test_unexisting_page(self):
         response = self.authorized_client.get('/unexisting-page/')
-        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.status_code, HTTPStatus.NOT_FOUND)
 
     def test_redirect_no_auth(self):
         response = self.authorized_no_auth.get(f'/posts/{self.post.pk}/edit/')
