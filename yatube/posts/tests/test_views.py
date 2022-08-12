@@ -70,10 +70,12 @@ class TaskPagesTests(TestCase):
         self.post_attributes_test('posts:index')
 
     def test_post_group_list_show_correct_context(self):
-        self.post_attributes_test('posts:group_list', {'slug': self.post.group.slug})
+        self.post_attributes_test('posts:group_list',
+                                  {'slug': self.post.group.slug})
 
     def test_post_profile_show_correct_context(self):
-        self.post_attributes_test('posts:profile', {'username': self.post.author})
+        self.post_attributes_test('posts:profile',
+                                  {'username': self.post.author})
 
     def test_post_detail_show_correct_context(self):
         response = self.authorized_client.get(reverse(
